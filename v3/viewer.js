@@ -1,4 +1,4 @@
-import {readRuntime} from './zip.js';
+import {readRuntime} from './zip.js?v=20261117-orig';
 const $=id=>document.getElementById(id),decode=b=>JSON.parse(new TextDecoder().decode(b));
 let state=null,sources=[],variants=[],filtered=[],notes={},urls=new Map(),requests=new Map(),currentId=null,generation=0;
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
