@@ -1,6 +1,6 @@
 // Runtime archives are read in memory. Imported JS/HTML is never executed.
 export async function sha(bytes){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');}
-export async function readRuntime(file,progress=()=>{}){
+export async function readRuntime(file,progress=()=>{},kind='base'){
  if(file.size>500*1024*1024)throw Error('ZIP은 500MB 이하여야 합니다.');
  const bytes=new Uint8Array(await file.arrayBuffer()),v=new DataView(bytes.buffer),decoder=new TextDecoder('utf-8',{fatal:true});
  let end=-1;for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--)if(v.getUint32(p,true)===0x06054b50&&p+22+v.getUint16(p+20,true)===bytes.length){end=p;break;}
@@ -21,6 +21,8 @@ export async function readRuntime(file,progress=()=>{}){
  const manifest=JSON.parse(decoder.decode(files.get('RUNTIME-MANIFEST.json')||new Uint8Array()));
  if(!Array.isArray(manifest.files)||manifest.files.length!==files.size-1)throw Error('V3 실행 manifest가 필요합니다.');
  const seen=new Set();for(let i=0;i<manifest.files.length;i++){const entry=manifest.files[i],raw=files.get(entry.path);if(seen.has(entry.path)||!raw||raw.length!==entry.bytes||await sha(raw)!==entry.sha256)throw Error('파일 해시 불일치: '+entry.path);seen.add(entry.path);if(i%50===0)progress(`해시 확인 ${i+1} / ${manifest.files.length}`);}
- if(![...files.keys()].some(n=>n.startsWith('factory_v3/data/sources/')))throw Error('V3 원문 JSON이 없습니다.');
+ if(kind==='originals'){
+  if(manifest.kind!=='grade34-originals'||!files.has('reference34/originals-index.json')||manifest.files.some(r=>!r.path.startsWith('reference34/originals/')&&r.path!=='reference34/originals-index.json'))throw Error('ORIG 보충 ZIP이 아닙니다.');
+ }else if(![...files.keys()].some(n=>n.startsWith('factory_v3/data/sources/')))throw Error('V3 기본 실행 ZIP이 필요합니다. ORIG ZIP은 기본 자료를 연 뒤 추가하세요.');
  return {files,manifest,sha256:await sha(bytes)};
 }
